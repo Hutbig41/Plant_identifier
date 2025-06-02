@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Identifier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0fdf4; /* Light green background */
+        }
+        .custom-file-button span {
+            display: block; /* Make span take full width */
+        }
+        /* Adding Inter font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        /* Custom styles for a more "natural" theme */
+        .theme-green {
+            --tw-bg-opacity: 1;
+            background-color: rgb(34 197 94 / var(--tw-bg-opacity)); /* Tailwind green-500 */
+        }
+        .theme-green-dark {
+             --tw-bg-opacity: 1;
+            background-color: rgb(22 163 74 / var(--tw-bg-opacity)); /* Tailwind green-600 */
+        }
+        .theme-text {
+            color: rgb(20 83 45); /* Tailwind green-800 */
+        }
+        .theme-border {
+            border-color: rgb(22 101 52); /* Tailwind green-700 */
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            padding: 2rem;
+            border: 1px solid #d1fae5; /* Lighter green border */
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #10b981; /* Tailwind emerald-500 */
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            pointer-events: none;
+        }
+        .message-box.success {
+            background-color: #d1fae5; /* Tailwind green-100 */
+            color: #065f46; /* Tailwind green-800 */
+            border: 1px solid #6ee7b7; /* Tailwind green-300 */
+        }
+        .message-box.error {
+            background-color: #fee2e2; /* Tailwind red-100 */
+            color: #991b1b; /* Tailwind red-800 */
+            border: 1px solid #fca5a5; /* Tailwind red-300 */
+        }
+        .message-box.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div id="messageBox" class="message-box"></div>
+
+    <div class="card w-full max-w-lg">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold theme-text">Plant Identifier</h1>
+            <p class="text-gray-600 mt-2">Upload an image of a plant, and we'll try to identify it!</p>
+        </header>
+
+        <main>
+            <div class="mb-6">
+                <label for="plantImageUpload" class="block text-lg font-medium theme-text mb-2">Upload Plant Image</label>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 theme-border border-dashed rounded-md">
+                    <div class="space-y-1 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="flex text-sm text-gray-600">
+                            <label for="plantImageUploadField" class="relative cursor-pointer theme-green-dark hover:theme-green text-white font-medium py-2 px-4 rounded-md focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-green-500">
+                                <span>Upload a file</span>
+                                <input id="plantImageUploadField" name="plantImageUploadField" type="file" class="sr-only" accept="image/png, image/jpeg, image/webp">
+                            </label>
+                            <p class="pl-1">or drag and drop</p>
+                        </div>
+                        <p class="text-xs text-gray-500">PNG, JPG, WEBP up to 10MB</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="imagePreviewContainer" class="mb-6 hidden">
+                <h3 class="text-md font-medium theme-text mb-2">Image Preview:</h3>
+                <img id="imagePreview" src="#" alt="Image preview" class="max-w-full h-auto mx-auto rounded-md shadow-md" style="max-height: 300px;"/>
+            </div>
+
+            <div class="mb-6 text-center">
+                <button id="identifyButton" class="w-full sm:w-auto theme-green hover:theme-green-dark text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    Identify Plant
+                </button>
+            </div>
+
+            <div id="loadingIndicator" class="flex justify-center items-center mb-6 hidden">
+                <div class="spinner"></div>
+                <p class="ml-3 text-gray-700">Identifying, please wait...</p>
+            </div>
+
+            <div id="resultsContainer" class="p-4 bg-green-50 rounded-lg shadow hidden">
+                <h3 class="text-xl font-semibold theme-text mb-3">Identification Result:</h3>
+                <p id="plantName" class="text-lg text-gray-800"></p>
+                <p id="errorMessage" class="text-red-600"></p>
+            </div>
+        </main>
+
+        <footer class="text-center mt-10 text-sm text-gray-500">
+            <p>&copy; 2025 Plant Identifier App. Powered by AI and HUTTECH.</p>
+        </footer>
+    </div>
+
+    <script>
+        // DOM Elements
+        const imageUploadField = document.getElementById('plantImageUploadField');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const identifyButton = document.getElementById('identifyButton');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const plantNameDisplay = document.getElementById('plantName');
+        const errorMessageDisplay = document.getElementById('errorMessage');
+        const messageBox = document.getElementById('messageBox');
+
+        let uploadedFile = null;
+
+        // --- Message Box Functionality ---
+        function showMessage(message, type = 'success', duration = 3000) {
+            messageBox.textContent = message;
+            messageBox.className = `message-box ${type} show`; // Add 'show' class
+
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, duration);
+        }
+
+        // Event listener for file input
+        imageUploadField.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                // Basic file type validation
+                if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+                    showMessage('Invalid file type. Please upload a PNG, JPG, or WEBP image.', 'error');
+                    imageUploadField.value = ''; // Reset file input
+                    return;
+                }
+
+                // Basic file size validation (e.g., 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showMessage('File is too large. Maximum size is 10MB.', 'error');
+                    imageUploadField.value = ''; // Reset file input
+                    return;
+                }
+
+                uploadedFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreviewContainer.classList.remove('hidden');
+                    identifyButton.disabled = false;
+                    resultsContainer.classList.add('hidden'); // Hide previous results
+                    plantNameDisplay.textContent = '';
+                    errorMessageDisplay.textContent = '';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                uploadedFile = null;
+                imagePreviewContainer.classList.add('hidden');
+                identifyButton.disabled = true;
+            }
+        });
+
+        // Event listener for identify button
+        identifyButton.addEventListener('click', async () => {
+            if (!uploadedFile) {
+                showMessage('Please upload an image first.', 'error');
+                return;
+            }
+
+            // Show loading indicator and disable button
+            loadingIndicator.classList.remove('hidden');
+            identifyButton.disabled = true;
+            resultsContainer.classList.add('hidden');
+            plantNameDisplay.textContent = '';
+            errorMessageDisplay.textContent = '';
+
+            try {
+                // Convert image to base64
+                const base64ImageData = await toBase64(uploadedFile);
+
+                // Prepare payload for Gemini API
+                const prompt = "Identify the plant in this image. Provide its common name. If possible, also provide its scientific name. If you are unsure, say that you cannot identify it with certainty.";
+                const payload = {
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                { text: prompt },
+                                {
+                                    inlineData: {
+                                        mimeType: uploadedFile.type,
+                                        data: base64ImageData
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                };
+
+                // Make API call to Gemini
+                // IMPORTANT: Replace with your actual API key if not using a proxy or environment where it's injected.
+                // For this environment, the API key might be handled by the platform.
+                const apiKey = "AIzaSyDRPlatBATlr6LvhoFTYqxyoVzcDEcM7pE"; // Leave empty if handled by the platform
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('API Error Response:', errorData);
+                    throw new Error(`API request failed with status ${response.status}: ${errorData?.error?.message || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+
+                // Process and display result
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const identifiedText = result.candidates[0].content.parts[0].text;
+                    plantNameDisplay.textContent = identifiedText;
+                    showMessage('Plant identified successfully!', 'success');
+                } else {
+                    console.warn('Unexpected API response structure:', result);
+                    plantNameDisplay.textContent = 'Could not identify the plant or the response was not as expected.';
+                    showMessage('Could not identify the plant from the response.', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error identifying plant:', error);
+                errorMessageDisplay.textContent = `Error: ${error.message}. Please try again. Check the console for more details.`;
+                showMessage(`Error: ${error.message}`, 'error', 5000);
+            } finally {
+                // Hide loading indicator and re-enable button
+                loadingIndicator.classList.add('hidden');
+                resultsContainer.classList.remove('hidden');
+                identifyButton.disabled = false; // Re-enable button even on error for retry
+                // Keep uploadedFile so user doesn't have to re-upload on simple API error
+            }
+        });
+
+        // Helper function to convert file to base64
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]); // Get only the base64 part
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Drag and Drop functionality
+        const dropZone = document.querySelector('.border-dashed');
+
+        dropZone.addEventListener('dragover', (event) => {
+            event.preventDefault(); // Prevent default behavior (Prevent file from being opened)
+            dropZone.classList.add('border-green-500', 'bg-green-50'); // Highlight drop zone
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-green-500', 'bg-green-50'); // Remove highlight
+        });
+
+        dropZone.addEventListener('drop', (event) => {
+            event.preventDefault(); // Prevent default behavior
+            dropZone.classList.remove('border-green-500', 'bg-green-50'); // Remove highlight
+
+            if (event.dataTransfer.files && event.dataTransfer.files[0]) {
+                const file = event.dataTransfer.files[0];
+                // Manually trigger the 'change' event logic for the file input
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                imageUploadField.files = dataTransfer.files;
+
+                // Dispatch the change event
+                const changeEvent = new Event('change', { bubbles: true });
+                imageUploadField.dispatchEvent(changeEvent);
+            }
+        });
+
+    </script>
+</body>
+</html>
